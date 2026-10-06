@@ -87,7 +87,7 @@ export default function VerifyOtpPage() {
     setError(null);
     setLoading(true);
 
-    try {
+        try {
       const res = await apiBrowser<{
         must_change_password: boolean;
         session_token?: string;
@@ -103,12 +103,16 @@ export default function VerifyOtpPage() {
       sessionStorage.removeItem("pf_pending_email");
       toast.success("Signed in");
 
-      // Hard navigation — forces the browser to make a fresh request
-      // that includes the just-set pf_token cookie.
       const next = res.must_change_password
         ? "/change-password"
         : "/dashboard";
-      window.location.href = next;
+
+      // Full-page navigation — forces the browser to send the freshly
+      // written pf_token cookie to Vercel's server. router.replace()
+      // does an RSC fetch which Vercel may serve from a stale cache.
+      setTimeout(() => {
+        window.location.href = next;
+      }, 100);
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Verification failed";
