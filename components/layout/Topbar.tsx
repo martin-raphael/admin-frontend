@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { Admin } from "@/server/auth";
-import { apiBrowser } from "@/lib/api/browser";
+import { apiBrowser, clearTokenCookie } from "@/lib/api/browser";
 
 export function Topbar({ admin }: { admin: Admin }) {
   const router = useRouter();
@@ -10,9 +10,11 @@ export function Topbar({ admin }: { admin: Admin }) {
   async function logout() {
     try {
       await apiBrowser("/api/v1/auth/logout", { method: "POST" });
-    } finally {
-      router.replace("/login");
+    } catch {
+      // ignore
     }
+    clearTokenCookie();
+    router.replace("/login");
   }
 
   const initials = admin.name

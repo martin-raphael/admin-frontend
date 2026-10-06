@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { apiBrowser, ApiError } from "@/lib/api/browser";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  apiBrowser,
+  ApiError,
+  clearTokenCookie,
+} from "@/lib/api/browser";
 import { toast } from "sonner";
 
 type Rule = { label: string; test: (pw: string) => boolean };
@@ -15,8 +19,10 @@ const RULES: Rule[] = [
   { label: "One symbol", test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-export default function ChangePasswordPage() {
+function ChangePasswordForm() {
   const router = useRouter();
+  const params = useSearchParams();
+
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,40 +36,45 @@ export default function ChangePasswordPage() {
   const matches = password.length > 0 && password === confirm;
   const canSubmit = allPass && matches && !loading;
 
-    async function onSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  if (!canSubmit) return;
-
-  setError(null);
-  setLoading(true);
-
-  const email =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("pf_pending_email")
-      : null;
-
-  try {
-    await apiBrowser("/api/v1/auth/change-password", {
-      method: "POST",
-      json: {
-        new_password: password,
-        email: email ?? undefined,
-      },
-    });
-    sessionStorage.removeItem("pf_pending_email");
-    toast.success("Password updated");
-    router.replace("/login?reason=password-changed");
-  } catch (err) {
-    const message =
-      err instanceof ApiError ? err.message : "Could not update password";
-    setError(message);
-    setLoading(false);
+  function resolvedEmail(): string | null {
+    const fromUrl = params.get("email");
+    if (fromUrl) return fromUrl;
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem("pf_pending_email");
   }
-}
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      await apiBrowser("/api/v1/auth/change-password", {
+        method: "POST",
+        json: {
+          new_password: password,
+          email: resolvedEmail() ?? undefined,
+        },
+      });
+
+      // The password change invalidates all sessions — wipe the token.
+      clearTokenCookie();
+      sessionStorage.removeItem("pf_pending_email");
+
+      toast.success("Password updated");
+      router.replace("/login?reason=password-changed");
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message : "Could not update password";
+      setError(message);
+      setLoading(false);
+    }
+  }
 
   return (
     <div>
-      {/* Step indicator */}
       <div className="mb-8 flex items-center gap-3">
         <span className="eyebrow">Step 03</span>
         <span className="h-px flex-1 bg-ink-300/60" />
@@ -92,7 +103,6 @@ export default function ChangePasswordPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          {/* Live rule checklist */}
           <div className="mt-4 space-y-2">
             {results.map((r) => (
               <div key={r.label} className="flex items-center gap-3">
@@ -149,5 +159,13 @@ export default function ChangePasswordPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense fallback={<div className="h-[420px]" />}>
+      <ChangePasswordForm />
+    </Suspense>
   );
 }

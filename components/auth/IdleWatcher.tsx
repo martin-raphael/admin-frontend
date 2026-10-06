@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiBrowser } from "@/lib/api/browser";
+import { apiBrowser, clearTokenCookie } from "@/lib/api/browser";
 
 const EVENTS = ["mousemove", "keydown", "click", "scroll", "touchstart"] as const;
 
@@ -22,8 +22,9 @@ export function IdleWatcher({
     try {
       await apiBrowser("/api/v1/auth/logout", { method: "POST" });
     } catch {
-      // Ignore — session may already be invalid server-side.
+      // ignore
     }
+    clearTokenCookie();
     router.replace("/login?reason=idle");
   }
 

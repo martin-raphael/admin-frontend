@@ -3,11 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiBrowser, ApiError } from "@/lib/api/browser";
+import {
+  apiBrowser,
+  ApiError,
+  setTokenCookie,
+} from "@/lib/api/browser";
 import { toast } from "sonner";
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 30;
+const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export default function VerifyOtpPage() {
   const router = useRouter();
@@ -18,7 +23,6 @@ export default function VerifyOtpPage() {
   const [seconds, setSeconds] = useState(RESEND_COOLDOWN);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  // Load email from previous step, or kick back to login
   useEffect(() => {
     const stored = sessionStorage.getItem("pf_pending_email");
     if (!stored) {
@@ -29,7 +33,6 @@ export default function VerifyOtpPage() {
     inputRefs.current[0]?.focus();
   }, [router]);
 
-  // Countdown for resend
   useEffect(() => {
     if (seconds <= 0) return;
     const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
@@ -65,7 +68,10 @@ export default function VerifyOtpPage() {
 
   function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, OTP_LENGTH);
     if (!pasted) return;
 
     const next = Array(OTP_LENGTH).fill("");
@@ -82,10 +88,19 @@ export default function VerifyOtpPage() {
     setLoading(true);
 
     try {
-      const res = await apiBrowser<{ must_change_password: boolean }>(
-        "/api/v1/auth/verify-otp",
-        { method: "POST", json: { email, code } },
-      );
+      const res = await apiBrowser<{
+        must_change_password: boolean;
+        session_token?: string;
+      }>("/api/v1/auth/verify-otp", {
+        method: "POST",
+        json: { email, code },
+      });
+
+      // Store the token as a cookie on THIS domain (Vercel) so the
+      // server-side layout can read it and forward it as a Bearer header.
+      if (res.session_token) {
+        setTokenCookie(res.session_token, SESSION_MAX_AGE);
+      }
 
       sessionStorage.removeItem("pf_pending_email");
       toast.success("Signed in");
@@ -109,7 +124,7 @@ export default function VerifyOtpPage() {
     try {
       await apiBrowser("/api/v1/auth/resend-otp", {
         method: "POST",
-        json: { email, password: sessionStorage.getItem("pf_pw_hint") ?? "" },
+        json: { email },
       });
       toast.success("New code sent");
       setSeconds(RESEND_COOLDOWN);
@@ -128,13 +143,10 @@ export default function VerifyOtpPage() {
     return `${local[0]}${"•".repeat(local.length - 2)}${local[local.length - 1]}@${domain}`;
   }
 
-  if (!email) {
-    return <div className="h-[420px]" />;
-  }
+  if (!email) return <div className="h-[420px]" />;
 
   return (
     <div>
-      {/* Step indicator */}
       <div className="mb-8 flex items-center gap-3">
         <span className="eyebrow">Step 02</span>
         <span className="h-px flex-1 bg-ink-300/60" />
@@ -207,10 +219,7 @@ export default function VerifyOtpPage() {
           {seconds > 0 ? `Resend in ${seconds}s` : "Resend code"}
         </button>
 
-        <Link
-          href="/login"
-          className="text-ink-500 hover:text-ink-900"
-        >
+        <Link href="/login" className="text-ink-500 hover:text-ink-900">
           Use a different account
         </Link>
       </div>
