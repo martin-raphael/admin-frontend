@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api/browser";
 import { ImageUploader, type NewImage } from "@/components/ui/ImageUploader";
 import { SpecsEditor, type Spec } from "@/components/ui/SpecsEditor";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { renderDescription } from "@/lib/render-description";
 
 type Props = {
   categories: Category[];
@@ -37,6 +38,7 @@ export function ProductForm({ categories, product }: Props) {
     product?.short_description ?? "",
   );
   const [description, setDescription] = useState(product?.description ?? "");
+  const [showPreview, setShowPreview] = useState(false);
   const [stockStatus, setStockStatus] = useState(
     product?.stock_status ?? "in_stock",
   );
@@ -283,14 +285,52 @@ export function ProductForm({ categories, product }: Props) {
                 placeholder="One line for cards and previews"
               />
             </div>
+
             <div>
               <label className="label">Full description</label>
               <textarea
-                className="input min-h-[140px] resize-y"
+                className="input min-h-[220px] resize-y font-mono text-[13px] leading-relaxed"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detailed description, materials, comfort, warranty…"
+                placeholder={`Write about the piece — materials, comfort, dimensions, warranty.
+
+Separate paragraphs with a blank line.
+
+Start a line with "- " to make a bullet point:
+- Solid mahogany frame
+- Hand-stitched upholstery
+- 2-year structural warranty
+
+Use **bold** for emphasis.`}
               />
+              <p className="hint">
+                <strong>Formatting:</strong> blank line = new paragraph ·{" "}
+                <code className="mx-1 rounded bg-surface-subtle px-1.5 py-0.5">
+                  - item
+                </code>{" "}
+                for a bullet ·{" "}
+                <code className="mx-1 rounded bg-surface-subtle px-1.5 py-0.5">
+                  **bold**
+                </code>{" "}
+                for emphasis.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowPreview((v) => !v)}
+                className="mt-2 text-xs font-medium text-brand-600 hover:text-brand-700"
+              >
+                {showPreview ? "Hide preview" : "Show preview"}
+              </button>
+
+              {showPreview && description.trim() && (
+                <div className="mt-3 rounded-lg border border-ink-300/40 bg-white p-5">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+                    Preview — how it appears on the storefront
+                  </div>
+                  {renderDescription(description)}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -332,7 +372,9 @@ export function ProductForm({ categories, product }: Props) {
               <select
                 className="input"
                 value={stockStatus}
-                onChange={(e) => setStockStatus(e.target.value as typeof stockStatus)}
+                onChange={(e) =>
+                  setStockStatus(e.target.value as typeof stockStatus)
+                }
               >
                 <option value="in_stock">In stock</option>
                 <option value="made_to_order">Made to order</option>
@@ -344,7 +386,9 @@ export function ProductForm({ categories, product }: Props) {
               <select
                 className="input"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as "draft" | "published")}
+                onChange={(e) =>
+                  setStatus(e.target.value as "draft" | "published")
+                }
               >
                 <option value="draft">Draft — hidden</option>
                 <option value="published">Published — visible</option>
@@ -364,7 +408,8 @@ export function ProductForm({ categories, product }: Props) {
                 Feature on homepage
               </span>
               <span className="block text-xs text-ink-500">
-                Featured products appear in the &ldquo;Trending Now&rdquo; section.
+                Featured products appear in the &ldquo;Trending Now&rdquo;
+                section.
               </span>
             </span>
           </label>
@@ -376,7 +421,6 @@ export function ProductForm({ categories, product }: Props) {
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             {isEdit && (

@@ -9,10 +9,10 @@ const NAV = [
   { href: "/products", label: "Products", index: "02" },
   { href: "/categories", label: "Categories", index: "03" },
   { href: "/offers", label: "Offers", index: "04" },
-  { href: "/media", label: "Media", index: "05" },
-  { href: "/testimonials", label: "Testimonials", index: "06" },
-  { href: "/inquiries", label: "Inquiries", index: "07" },
-  { href: "/settings", label: "Settings", index: "08" },
+  // { href: "/media", label: "Media", index: "05" },
+  { href: "/testimonials", label: "Testimonials", index: "05" },
+  { href: "/inquiries", label: "Inquiries", index: "06" },
+  { href: "/settings", label: "Settings", index: "07" },
 ];
 
 export function Sidebar() {
