@@ -30,18 +30,27 @@ export default function ChangePasswordPage() {
   const matches = password.length > 0 && password === confirm;
   const canSubmit = allPass && matches && !loading;
 
-  async function onSubmit(e: React.FormEvent) {
+    async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
 
     setError(null);
     setLoading(true);
 
+    const email =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("pf_pending_email")
+        : null;
+
     try {
       await apiBrowser("/api/v1/auth/change-password", {
         method: "POST",
-        json: { new_password: password },
+        json: {
+          new_password: password,
+          email: email ?? undefined,
+        },
       });
+      sessionStorage.removeItem("pf_pending_email");
       toast.success("Password updated");
       router.replace("/login?reason=password-changed");
     } catch (err) {
