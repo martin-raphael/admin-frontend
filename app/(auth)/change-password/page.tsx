@@ -31,35 +31,35 @@ export default function ChangePasswordPage() {
   const canSubmit = allPass && matches && !loading;
 
     async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canSubmit) return;
+  e.preventDefault();
+  if (!canSubmit) return;
 
-    setError(null);
-    setLoading(true);
+  setError(null);
+  setLoading(true);
 
-    const email =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem("pf_pending_email")
-        : null;
+  const email =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("pf_pending_email")
+      : null;
 
-    try {
-      await apiBrowser("/api/v1/auth/change-password", {
-        method: "POST",
-        json: {
-          new_password: password,
-          email: email ?? undefined,
-        },
-      });
-      sessionStorage.removeItem("pf_pending_email");
-      toast.success("Password updated");
-      router.replace("/login?reason=password-changed");
-    } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "Could not update password";
-      setError(message);
-      setLoading(false);
-    }
+  try {
+    await apiBrowser("/api/v1/auth/change-password", {
+      method: "POST",
+      json: {
+        new_password: password,
+        email: email ?? undefined,
+      },
+    });
+    sessionStorage.removeItem("pf_pending_email");
+    toast.success("Password updated");
+    router.replace("/login?reason=password-changed");
+  } catch (err) {
+    const message =
+      err instanceof ApiError ? err.message : "Could not update password";
+    setError(message);
+    setLoading(false);
   }
+}
 
   return (
     <div>
