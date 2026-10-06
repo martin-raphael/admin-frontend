@@ -80,7 +80,7 @@ export default function VerifyOtpPage() {
     inputRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
   }
 
-  async function onSubmit(e: React.FormEvent) {
+    async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isComplete || !email) return;
 
@@ -96,8 +96,6 @@ export default function VerifyOtpPage() {
         json: { email, code },
       });
 
-      // Store the token as a cookie on THIS domain (Vercel) so the
-      // server-side layout can read it and forward it as a Bearer header.
       if (res.session_token) {
         setTokenCookie(res.session_token, SESSION_MAX_AGE);
       }
@@ -105,9 +103,12 @@ export default function VerifyOtpPage() {
       sessionStorage.removeItem("pf_pending_email");
       toast.success("Signed in");
 
-      router.replace(
-        res.must_change_password ? "/change-password" : "/dashboard",
-      );
+      // Hard navigation — forces the browser to make a fresh request
+      // that includes the just-set pf_token cookie.
+      const next = res.must_change_password
+        ? "/change-password"
+        : "/dashboard";
+      window.location.href = next;
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Verification failed";
